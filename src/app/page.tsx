@@ -1,65 +1,54 @@
-import Image from "next/image";
+"use client";
+
+import { TryOnProvider } from "@/contexts/TryOnContext";
+import { TryOnForm } from "@/components/business/try-on-form";
+import { TryOnResult } from "@/components/business/try-on-result";
+import { AlertCircle } from "lucide-react";
+import { useTryOn } from "@/contexts/TryOnContext";
+
+function TryOnContent() {
+  const { error, clearError } = useTryOn();
+
+  return (
+    <div className="container mx-auto max-w-6xl px-4 py-8">
+      <header className="mb-8 text-center">
+        <h1 className="text-4xl font-bold tracking-tight text-[#171717] dark:text-[#ededed]">
+          Virtual Try-On
+        </h1>
+        <p className="mt-2 text-[#737373]">
+          Upload your photo and clothing image to see how you look before you buy
+        </p>
+      </header>
+
+      {error && (
+        <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900 dark:bg-red-950/20 dark:text-red-200">
+          <AlertCircle className="h-5 w-5" />
+          <p className="flex-1 text-sm">{error}</p>
+          <button
+            onClick={clearError}
+            className="text-sm underline hover:no-underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <main className="space-y-6">
+        <TryOnForm />
+        <TryOnResult />
+      </main>
+
+      <footer className="mt-12 text-center text-sm text-[#737373]">
+        <p>Powered by AI • For reference only • Actual fit may vary</p>
+      </footer>
+    </div>
+  );
+}
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <TryOnProvider>
+      <TryOnContent />
+    </TryOnProvider>
   );
 }
