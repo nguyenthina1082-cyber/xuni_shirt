@@ -7,35 +7,43 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { personImageUrl, clothingImageUrl } = body;
+    const { personImageBase64, clothingImageBase64 } = body;
 
     console.log(`[API] TryOn request received`, {
-      personImageUrl,
-      clothingImageUrl,
+      hasPersonImage: !!personImageBase64,
+      hasClothingImage: !!clothingImageBase64,
       duration: `${Date.now() - startTime}ms`,
     });
 
-    if (!personImageUrl) {
+    if (!personImageBase64) {
       return NextResponse.json<ApiResponse>(
         {
           success: false,
-          error: { code: "MISSING_PERSON_IMAGE", message: "人物图片 URL 不能为空" },
+          error: { code: "MISSING_PERSON_IMAGE", message: "人物图片不能为空" },
         },
         { status: 400 }
       );
     }
 
-    if (!clothingImageUrl) {
+    if (!clothingImageBase64) {
       return NextResponse.json<ApiResponse>(
         {
           success: false,
-          error: { code: "MISSING_CLOTHING_IMAGE", message: "服装图片 URL 不能为空" },
+          error: { code: "MISSING_CLOTHING_IMAGE", message: "服装图片不能为空" },
         },
         { status: 400 }
       );
     }
 
     const client = getArkClient();
+
+    const personImageUrl = personImageBase64.startsWith("data:")
+      ? personImageBase64
+      : `data:image/jpeg;base64,${personImageBase64}`;
+
+    const clothingImageUrl = clothingImageBase64.startsWith("data:")
+      ? clothingImageBase64
+      : `data:image/jpeg;base64,${clothingImageBase64}`;
 
     const result = await client.generateTryOnImage(personImageUrl, clothingImageUrl);
 

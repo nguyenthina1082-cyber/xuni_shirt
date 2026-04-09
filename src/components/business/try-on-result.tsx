@@ -3,12 +3,14 @@
 import * as React from "react";
 import { CheckCircle, ThumbsUp, RotateCcw, Download, Share2 } from "lucide-react";
 import { useTryOn } from "@/contexts/TryOnContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export function TryOnResult() {
   const { state, reset, resultImages } = useTryOn();
+  const { t } = useLanguage();
   const [selectedIndex, setSelectedIndex] = React.useState(0);
 
   if (state !== "result_ready" || resultImages.length === 0) {
@@ -42,7 +44,7 @@ export function TryOnResult() {
         const file = new File([blob], "tryon-result.png", { type: "image/png" });
 
         await navigator.share({
-          title: "My Try-On Result",
+          title: t("tryOnResults"),
           text: "Check out my virtual try-on!",
           files: [file],
         });
@@ -59,7 +61,7 @@ export function TryOnResult() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CheckCircle className="h-5 w-5 text-green-500" />
-          Try-On Result
+          {t("tryOnResults")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -104,7 +106,7 @@ export function TryOnResult() {
                 className="flex-1 gap-2"
               >
                 <Download className="h-4 w-4" />
-                Download
+                {t("download")}
               </Button>
               <Button
                 variant="outline"
@@ -113,16 +115,16 @@ export function TryOnResult() {
                 className="flex-1 gap-2"
               >
                 <Share2 className="h-4 w-4" />
-                Share
+                {t("share")}
               </Button>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="rounded-lg bg-[#fafafa] p-4 dark:bg-[#1a1a1a]">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="mb-2 flex items-center gap-2">
                 <ThumbsUp className="h-4 w-4 text-[#737373]" />
-                <span className="text-sm font-medium">AI Quality Score</span>
+                <span className="text-sm font-medium">{t("aiAnalysis")}</span>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold">{currentResult?.score || 0}</span>
@@ -131,24 +133,23 @@ export function TryOnResult() {
             </div>
 
             <div className="rounded-lg bg-[#fafafa] p-4 dark:bg-[#1a1a1a]">
-              <p className="text-sm font-medium mb-2">AI Assessment</p>
+              <p className="mb-2 text-sm font-medium">{t("reason")}</p>
               <p className="text-sm text-[#737373]">
-                {currentResult?.reason || "No assessment available"}
+                {currentResult?.reason || t("noResultsYet")}
               </p>
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium">Tips for better results:</p>
+              <p className="text-sm font-medium">{t("forReference")}:</p>
               <ul className="space-y-1 text-sm text-[#737373]">
-                <li>• Use clear, front-facing photos</li>
-                <li>• Simple backgrounds work best</li>
-                <li>• Try different clothing types for variety</li>
+                <li>• {t("yourPhotoHint")}</li>
+                <li>• {t("clothingPhotoHint")}</li>
               </ul>
             </div>
 
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                This is an AI-generated preview for reference only. Actual fit may vary.
+                {t("actualFit")}
               </p>
             </div>
           </div>
@@ -157,7 +158,7 @@ export function TryOnResult() {
         <div className="flex justify-center pt-4">
           <Button variant="outline" onClick={reset} className="gap-2">
             <RotateCcw className="h-4 w-4" />
-            Try Another Clothing
+            {t("tryAnother")}
           </Button>
         </div>
       </CardContent>

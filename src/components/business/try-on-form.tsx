@@ -3,6 +3,7 @@
 import * as React from "react";
 import { RotateCcw, Sparkles, Loader2 } from "lucide-react";
 import { useTryOn } from "@/contexts/TryOnContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,9 @@ export function TryOnForm() {
   const {
     state,
     personImage,
+    personImageBase64,
     clothingImage,
+    clothingImageBase64,
     resultImage,
     resultImages,
     clothingType,
@@ -27,6 +30,7 @@ export function TryOnForm() {
     setError,
     dispatch,
   } = useTryOn();
+  const { t } = useLanguage();
 
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
@@ -55,7 +59,7 @@ export function TryOnForm() {
 
     setIsGenerating(true);
     setProgress(10);
-    setProgressStatus("Generating...");
+    setProgressStatus(t("generatingPleaseWait"));
 
     try {
       dispatch({ type: "USE_QUOTA" });
@@ -65,8 +69,8 @@ export function TryOnForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          personImageUrl: personImage,
-          clothingImageUrl: clothingImage,
+          personImageBase64: personImageBase64,
+          clothingImageBase64: clothingImageBase64,
         }),
       });
 
@@ -75,26 +79,26 @@ export function TryOnForm() {
       }
 
       setProgress(70);
-      setProgressStatus("Processing result...");
+      setProgressStatus(t("generatingPleaseWait"));
 
       const data = await response.json();
 
       if (data.success && data.data?.imageUrls?.length > 0) {
-        const results = data.data.imageUrls.map((url: string, index: number) => ({
+        const results = data.data.imageUrls.map((url: string) => ({
           url,
           score: 0,
           reason: "",
         }));
         setResult(results);
       } else {
-        throw new Error(data.error?.message || "No results generated");
+        throw new Error(data.error?.message || t("noResultsGenerated"));
       }
 
       setProgress(100);
-      setProgressStatus("Done!");
+      setProgressStatus(t("done"));
     } catch (error) {
       console.error("Generation error:", error);
-      setError(error instanceof Error ? error.message : "Generation failed");
+      setError(error instanceof Error ? error.message : t("noResultsGenerated"));
     } finally {
       setIsGenerating(false);
     }
@@ -109,20 +113,20 @@ export function TryOnForm() {
   const isLoading = state === "generating" || isGenerating;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-2 grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <span>Your Photo</span>
+            <span>{t("yourPhoto")}</span>
             <span className="text-xs font-normal text-[#737373]">
-              (Reused in session)
+              ({t("yourPhotoReuse")})
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ImageUploader
-            label="Upload your photo"
-            hint="Clear, front-facing photo works best"
+            label={t("uploadYourPhoto")}
+            hint={t("yourPhotoHint")}
             onImageSelect={handlePersonImageSelect}
             currentImage={personImage}
             onClear={handleClearPerson}
@@ -134,12 +138,12 @@ export function TryOnForm() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Clothing Photo</CardTitle>
+          <CardTitle>{t("clothingPhoto")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <ImageUploader
-            label="Upload clothing"
-            hint="Flat lay or model photo"
+            label={t("uploadClothing")}
+            hint={t("clothingPhotoHint")}
             onImageSelect={handleClothingImageSelect}
             currentImage={clothingImage}
             onClear={handleClearClothing}
@@ -148,7 +152,7 @@ export function TryOnForm() {
           />
 
           <div className="space-y-2">
-            <Label>Clothing Type</Label>
+            <Label>{t("clothingType")}</Label>
             <div className="flex gap-2">
               {(["upper", "lower", "full"] as const).map((type) => (
                 <Button
@@ -158,9 +162,9 @@ export function TryOnForm() {
                   onClick={() => setClothingType(type)}
                   disabled={isLoading}
                 >
-                  {type === "upper" && "Top"}
-                  {type === "lower" && "Bottom"}
-                  {type === "full" && "Dress"}
+                  {type === "upper" && t("top")}
+                  {type === "lower" && t("bottom")}
+                  {type === "full" && t("dress")}
                 </Button>
               ))}
             </div>
@@ -171,8 +175,7 @@ export function TryOnForm() {
       <div className="lg:col-span-2 flex flex-col items-center gap-4">
         <div className="text-center">
           <p className="text-sm text-[#737373]">
-            {quota.totalCredits - quota.usedCredits} of {quota.totalCredits} free
-            tries remaining
+            {quota.totalCredits - quota.usedCredits} {t("of")} {quota.totalCredits} {t("freeTries")}
           </p>
         </div>
 
@@ -186,12 +189,12 @@ export function TryOnForm() {
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Generating...
+                {t("generating")}
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                Generate Try-On
+                {t("generateTryOn")}
               </>
             )}
           </Button>
@@ -205,7 +208,7 @@ export function TryOnForm() {
               className="gap-2"
             >
               <RotateCcw className="h-4 w-4" />
-              Try Another
+              {t("tryAnother")}
             </Button>
           )}
         </div>
