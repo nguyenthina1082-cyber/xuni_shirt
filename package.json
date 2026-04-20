@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cd atelier && pnpm dev",
-    "build": "cd atelier && pnpm build",
-    "start": "cd atelier && pnpm start",
-    "lint": "cd atelier && pnpm lint"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
   },
   "dependencies": {
     "clsx": "^2.1.1",
