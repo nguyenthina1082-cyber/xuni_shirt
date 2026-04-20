@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "dev": "cd atelier && next dev",
+    "build": "cd atelier && next build",
+    "start": "cd atelier && next start",
+    "lint": "cd atelier && eslint"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
