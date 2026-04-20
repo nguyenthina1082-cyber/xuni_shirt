@@ -9,9 +9,9 @@ import { ApiErrorType } from "@/types/ark";
 
 const ARK_API_URL = "https://ark.cn-beijing.volces.com/api/v3/images/generations";
 
-const DEFAULT_TIMEOUT = 60000;
-const DEFAULT_RETRIES = 2;
-const DEFAULT_RETRY_DELAY = 1000;
+const DEFAULT_TIMEOUT = 120000;
+const DEFAULT_RETRIES = 1;
+const DEFAULT_RETRY_DELAY = 2000;
 
 function createApiError(type: ApiErrorType, message: string, code?: number | string): ApiError {
   return { type, code: code || type, message };
