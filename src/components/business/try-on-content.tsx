@@ -6,6 +6,8 @@ import { TryOnForm } from "@/components/business/try-on-form";
 import { TryOnResult } from "@/components/business/try-on-result";
 import { AlertCircle } from "lucide-react";
 import { useTryOn } from "@/contexts/TryOnContext";
+import { TiltCard } from "@/components/ui/tilt-card";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
 
 function LanguageSwitcher() {
   const { language, setLanguage } = useLanguage();
@@ -58,8 +60,15 @@ export function TryOnContent() {
         </div>
       )}
 
-      <main className="space-y-6">
-        <TryOnForm />
+      <main className="relative">
+        <div className="relative rounded-2xl">
+          <GlowingEffect disabled={false} />
+          <TiltCard>
+            <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+              <TryOnForm />
+            </div>
+          </TiltCard>
+        </div>
         <TryOnResult />
       </main>
 

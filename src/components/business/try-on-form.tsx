@@ -6,6 +6,7 @@ import { useTryOn } from "@/contexts/TryOnContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ImageUploader } from "@/components/ui/image-uploader";
 import { Button } from "@/components/ui/button";
+import { ButtonColorful } from "@/components/ui/button-colorful";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -180,24 +181,13 @@ export function TryOnForm() {
         </div>
 
         <div className="flex gap-3">
-          <Button
+          <ButtonColorful
             size="lg"
             onClick={handleGenerate}
             disabled={!canGenerate() || isLoading}
             className="gap-2"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t("generating")}
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                {t("generateTryOn")}
-              </>
-            )}
-          </Button>
+            label={isLoading ? t("generating") : t("generateTryOn")}
+          />
 
           {(resultImage || resultImages.length > 0) && (
             <Button
