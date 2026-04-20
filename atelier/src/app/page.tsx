@@ -1,198 +1,291 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Navigation } from "@/components/ui/navigation";
 import { Footer } from "@/components/ui/footer";
+import { AIInputWithSearch } from "@/components/ui/ai-input-with-search";
+import { BlurFade } from "@/components/ui/blur-fade";
+import { DotPattern } from "@/components/ui/dot-pattern";
+import { cn } from "@/lib/utils";
 
-export default function FittingRoomPage() {
-  const [personImage, setPersonImage] = useState<string | null>(null);
-  const [clothingImage, setClothingImage] = useState<string | null>(null);
-  const [resultImage, setResultImage] = useState<string | null>(null);
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  imageUrls?: string[];
+}
+
+export default function HomePage() {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const personInputRef = useRef<HTMLInputElement>(null);
-  const clothingInputRef = useRef<HTMLInputElement>(null);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const handlePersonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setPersonImage(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+  const hour = new Date().getHours();
+  let timeOfDay;
+  if (hour < 12) timeOfDay = "上午好";
+  else if (hour < 18) timeOfDay = "下午好";
+  else timeOfDay = "晚上好";
 
-  const handleClothingUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setClothingImage(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
+  const handleSubmit = async (value: string, withSearch: boolean) => {
+    if (!value.trim() && pendingImages.length === 0) return;
 
-  const handleTryOn = async () => {
-    if (!personImage || !clothingImage) return;
+    const imagesToUse = [...pendingImages];
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: value,
+      imageUrls: imagesToUse.length > 0 ? imagesToUse : undefined,
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
-    setResultImage(null);
+    setPendingImages([]);
 
-    try {
-      const response = await fetch("/api/tryon", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          person_image: personImage,
-          clothing_image: clothingImage,
-        }),
-      });
+    if (imagesToUse.length >= 2) {
+      try {
+        const response = await fetch("/api/tryon", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            person_image: imagesToUse[0],
+            clothing_image: imagesToUse[1],
+          }),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data?.result_image) {
-          setResultImage(data.data.result_image);
-        } else {
-          alert(data.error?.message || "试穿失败，请重试");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data?.result_image) {
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: "assistant",
+              content: "换装完成！效果如下：",
+              imageUrls: [data.data.result_image],
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          }
         }
-      } else {
-        alert("试穿失败，请重试");
+      } catch {
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "抱歉，换装失败了，请重试。",
+        };
+        setMessages((prev) => [...prev, errorMessage]);
       }
-    } catch {
-      alert("网络错误，请重试");
-    } finally {
-      setIsLoading(false);
+    } else {
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "请上传人物照片和服装图片，我来帮你换装！",
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
     }
+
+    setIsLoading(false);
   };
 
-  const handleReset = () => {
-    setPersonImage(null);
-    setClothingImage(null);
-    setResultImage(null);
-    if (personInputRef.current) personInputRef.current.value = "";
-    if (clothingInputRef.current) clothingInputRef.current.value = "";
+  const handleFileSelect = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setPendingImages((prev) => [...prev, result]);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const downloadImage = (url: string, filename: string) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
   };
 
   return (
-    <>
+    <div className="min-h-screen bg-white">
       <Navigation />
-      <main className="pt-32 pb-20 px-6 min-h-screen bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-5xl mx-auto">
-          <header className="text-center mb-16">
-            <h1 className="text-5xl font-semibold tracking-tight text-gray-900 mb-4">
-              贝塔换衣间
-            </h1>
-            <p className="text-xl text-gray-500 font-light">
-              上传照片，立即体验虚拟试穿
+      <DotPattern
+        className={cn(
+          "[mask-image:radial-gradient(300px_circle_at_center,white,transparent)]",
+          "opacity-30"
+        )}
+      />
+
+      <div className="relative max-w-3xl mx-auto px-6 pt-32 pb-20">
+        <header className="text-center mb-12">
+          <BlurFade delay={0.25} inView>
+            <h2 className="text-4xl font-bold tracking-tighter sm:text-5xl">
+              {timeOfDay}，欢迎来到贝塔换衣间
+            </h2>
+          </BlurFade>
+          <BlurFade delay={0.25 * 2} inView>
+            <p className="mt-4 text-lg text-gray-500">
+              上传照片，告诉我你想怎么换装
             </p>
-          </header>
+          </BlurFade>
+        </header>
 
-          <div className="grid md:grid-cols-2 gap-10 mb-12">
-            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50">
-              <h2 className="text-xl font-semibold mb-6 text-gray-900">您的照片</h2>
-              <div
-                className="aspect-[3/4] bg-gray-50 rounded-2xl flex items-center justify-center cursor-pointer overflow-hidden border border-gray-200 hover:border-blue-400 transition-all duration-300 group"
-                onClick={() => personInputRef.current?.click()}
-              >
-                {personImage ? (
-                  <img
-                    src={personImage}
-                    alt="您的照片"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="text-center text-gray-400 group-hover:text-blue-500 transition-colors">
-                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                      <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
-                    <p className="font-medium">点击上传照片</p>
-                    <p className="text-sm mt-1 text-gray-400">支持 JPG、PNG</p>
-                  </div>
-                )}
-              </div>
-              <input
-                ref={personInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePersonUpload}
-                className="hidden"
-              />
-            </div>
+        <div className="max-w-2xl mx-auto mb-12">
+          <AIInputWithSearch
+            onSubmit={handleSubmit}
+            onFileSelect={handleFileSelect}
+            placeholder="描述你想要的效果..."
+          />
+        </div>
 
-            <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50">
-              <h2 className="text-xl font-semibold mb-6 text-gray-900">服装图片</h2>
-              <div
-                className="aspect-[3/4] bg-gray-50 rounded-2xl flex items-center justify-center cursor-pointer overflow-hidden border border-gray-200 hover:border-blue-400 transition-all duration-300 group"
-                onClick={() => clothingInputRef.current?.click()}
-              >
-                {clothingImage ? (
-                  <img
-                    src={clothingImage}
-                    alt="服装图片"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="text-center text-gray-400 group-hover:text-blue-500 transition-colors">
-                    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                      <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                      </svg>
-                    </div>
-                    <p className="font-medium">点击上传服装</p>
-                    <p className="text-sm mt-1 text-gray-400">支持 JPG、PNG</p>
-                  </div>
-                )}
-              </div>
-              <input
-                ref={clothingInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleClothingUpload}
-                className="hidden"
-              />
+        {pendingImages.length > 0 && (
+          <div className="max-w-2xl mx-auto mb-12">
+            <p className="text-sm text-gray-500 mb-3 text-center">已上传 {pendingImages.length} 张图片（第一张为人物，第二张为服装）</p>
+            <div className="flex gap-4 justify-center">
+              {pendingImages.map((img, i) => (
+                <div key={i} className="relative">
+                  <img src={img} alt={`上传${i + 1}`} className="w-24 h-32 object-cover rounded-xl" />
+                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
+        )}
 
-          {resultImage && (
-            <div className="mb-12">
-              <h2 className="text-xl font-semibold mb-6 text-gray-900 text-center">试穿效果</h2>
-              <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 max-w-md mx-auto">
-                <div className="aspect-[3/4] bg-gray-50 rounded-2xl flex items-center justify-center overflow-hidden">
-                  <img
-                    src={resultImage}
-                    alt="试穿效果"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-center gap-4">
+        <div className="max-w-2xl mx-auto mb-12">
+          <p className="text-sm text-gray-400 mb-3 text-center">试试这样问：</p>
+          <div className="flex flex-wrap justify-center gap-2">
             <button
-              onClick={handleTryOn}
-              disabled={!personImage || !clothingImage || isLoading}
-              className="px-10 py-4 bg-blue-500 text-white rounded-full font-semibold text-lg hover:bg-blue-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 active:scale-98"
+              onClick={() => handleSubmit("把图片1的人物换成图片2的衣服", false)}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
             >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  生成中...
-                </span>
-              ) : "开始试穿"}
+              把图片1的人物换成图片2的衣服
             </button>
             <button
-              onClick={handleReset}
-              className="px-10 py-4 bg-gray-100 text-gray-700 rounded-full font-semibold text-lg hover:bg-gray-200 transition-all active:scale-98"
+              onClick={() => handleSubmit("帮我把这件衣服换到左边的人身上", false)}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
             >
-              重置
+              帮我把这件衣服换到左边的人身上
+            </button>
+            <button
+              onClick={() => handleSubmit("右边的人穿左边这件衣服", false)}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+            >
+              右边的人穿左边这件衣服
             </button>
           </div>
         </div>
-      </main>
+
+        {messages.length > 0 && (
+          <div className="space-y-6">
+            {messages.map((msg) => (
+              <BlurFade key={msg.id} inView>
+                <div className={cn(
+                  "flex",
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                )}>
+                  <div className={cn(
+                    "max-w-[80%] rounded-2xl px-6 py-4",
+                    msg.role === "user"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 text-gray-900"
+                  )}>
+                    <p className="mb-2">{msg.content}</p>
+                    {msg.imageUrls && msg.imageUrls.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {msg.imageUrls.map((url, i) => (
+                          <div key={i} className="relative group">
+                            <img
+                              src={url}
+                              alt="结果"
+                              className="rounded-xl w-32 h-40 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => setPreviewImage(url)}
+                            />
+                            <button
+                              onClick={() => downloadImage(url, `result-${Date.now()}.png`)}
+                              className="absolute bottom-2 right-2 w-8 h-8 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </BlurFade>
+            ))}
+          </div>
+        )}
+
+        {isLoading && (
+          <div className="flex justify-start mb-6">
+            <div className="bg-gray-100 rounded-2xl px-6 py-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <section className="max-w-4xl mx-auto mt-16">
+          <h3 className="text-lg font-semibold mb-6 text-center">创作案例</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="relative group rounded-xl overflow-hidden cursor-pointer">
+                <div className="w-full aspect-[3/4]">
+                  <img
+                    src={`https://picsum.photos/300/450?random=${i + 10}`}
+                    alt={`案例${i}`}
+                    className="w-full h-full object-cover rounded-xl group-hover:scale-110 duration-300 transition-all"
+                    onClick={() => setPreviewImage(`https://picsum.photos/300/450?random=${i + 10}`)}
+                  />
+                </div>
+                <div className="absolute left-0 right-0 top-0 m-3 flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-full bg-[rgba(51,51,51,0.8)] transition-all duration-300 group-hover:w-[72px]">
+                  <span className="text-white text-xs">▶</span>
+                  <span className="text-white/80 text-xs">View</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-8"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white text-2xl"
+            onClick={() => setPreviewImage(null)}
+          >
+            ×
+          </button>
+          <img
+            src={previewImage}
+            alt="预览"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              downloadImage(previewImage, `preview-${Date.now()}.png`);
+            }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 bg-white text-black rounded-full font-medium flex items-center gap-2 hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            下载图片
+          </button>
+        </div>
+      )}
+
       <Footer />
-    </>
+    </div>
   );
 }
