@@ -121,7 +121,7 @@ export default function HomePage() {
           </BlurFade>
           <BlurFade delay={0.25 * 2} inView>
             <p className="mt-4 text-lg text-gray-500">
-              上传照片，告诉我你想怎么换装
+              上传照片，我来帮你换装
             </p>
           </BlurFade>
         </header>

@@ -1,1 +1,13 @@
 {"timestamp":"03:55:28.585","source":"Server","level":"LOG","message":"✓ Compiled in 1294ms"}
+{"timestamp":"03:58:19.084","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:19.107","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:19.245","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:19.281","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:20.174","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:20.176","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:20.197","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:20.204","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:30.701","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:30.713","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:30.756","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
+{"timestamp":"03:58:30.773","source":"Server","level":"ERROR","message":"Error: ENOENT: no such file or directory, scandir '/Users/qigenghao/Documents/trae_projects/xuni_shirt/atelier/src/app'"}
