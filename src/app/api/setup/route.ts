@@ -17,7 +17,22 @@ export async function GET() {
 
     await sql`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`;
 
-    return NextResponse.json({ success: true, message: "Users table created successfully" });
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)`;
+    } catch {
+    }
+
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
+    } catch {
+    }
+
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
+    } catch {
+    }
+
+    return NextResponse.json({ success: true, message: "Users table ready" });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Setup failed" },

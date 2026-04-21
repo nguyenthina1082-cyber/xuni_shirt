@@ -2,40 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
-async function verifyTurnstile(token: string): Promise<boolean> {
-  const response = await fetch(
-    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        secret: process.env.TURNSTILE_SECRET_KEY,
-        response: token,
-      }),
-    }
-  );
-  const data = await response.json();
-  return data.success;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { email, password, turnstileToken } = body;
 
-    if (!email || !password || !turnstileToken) {
+    if (!email || !password) {
       return NextResponse.json(
         { success: false, error: { message: "缺少必要参数" } },
         { status: 400 }
       );
     }
 
-    const isValidTurnstile = await verifyTurnstile(turnstileToken);
-    if (!isValidTurnstile) {
-      return NextResponse.json(
-        { success: false, error: { message: "人机验证失败" } },
-        { status: 400 }
+    const isProduction = process.env.NODE_ENV === "production";
+
+    if (isProduction) {
+      if (!turnstileToken) {
+        return NextResponse.json(
+          { success: false, error: { message: "请先完成人机验证" } },
+          { status: 400 }
+        );
+      }
+
+      const response = await fetch(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            secret: process.env.TURNSTILE_SECRET_KEY,
+            response: turnstileToken,
+          }),
+        }
       );
+      const turnstileData = await response.json();
+      if (!turnstileData.success) {
+        return NextResponse.json(
+          { success: false, error: { message: "人机验证失败" } },
+          { status: 400 }
+        );
+      }
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
