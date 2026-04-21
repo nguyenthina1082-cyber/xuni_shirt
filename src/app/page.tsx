@@ -87,12 +87,30 @@ export default function HomePage() {
   };
 
   const handleFileSelect = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      setPendingImages((prev) => [...prev, result]);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const maxSize = 1024;
+      let { width, height } = img;
+      if (width > maxSize || height > maxSize) {
+        if (width > height) {
+          height = (height / width) * maxSize;
+          width = maxSize;
+        } else {
+          width = (width / height) * maxSize;
+          height = maxSize;
+        }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL("image/jpeg", 0.8);
+      setPendingImages((prev) => [...prev, compressed]);
     };
-    reader.readAsDataURL(file);
+
+    const url = URL.createObjectURL(file);
+    img.src = url;
   };
 
   const downloadImage = (url: string, filename: string) => {
