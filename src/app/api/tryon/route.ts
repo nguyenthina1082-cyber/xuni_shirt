@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getArkClient, ApiErrorType } from "@/services/ark";
+import { uploadToR2 } from "@/lib/r2";
 import type { ApiResponse } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -30,7 +31,34 @@ export async function POST(request: NextRequest) {
     const client = getArkClient();
     const result = await client.generateTryOnImage(personImageUrl, clothingImageUrl);
 
-    const imageUrls = result.map((img) => img.url || "").filter(Boolean);
+    console.log("🎨 Ark API 返回结果:", JSON.stringify(result, null, 2));
+
+    const imageUrls: string[] = [];
+
+    for (let i = 0; i < result.length; i++) {
+      const img = result[i];
+      console.log(`🖼️ 处理第 ${i} 张图片, Ark 返回的 url:`, img.url);
+      if (img.url) {
+        try {
+          console.log(`📤 下载 Ark 图片并上传到 R2...`);
+          const response = await fetch(img.url);
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          console.log(`📦 下载的图片大小:`, buffer.length);
+          const fileName = `tryon/${Date.now()}-${i}.png`;
+          const uploadedUrl = await uploadToR2(buffer, fileName, "image/png");
+          console.log(`✅ 上传成功，R2 URL:`, uploadedUrl);
+          imageUrls.push(uploadedUrl);
+        } catch (uploadError) {
+          console.error(`❌ 处理第 ${i} 张图片失败:`, uploadError);
+          imageUrls.push(img.url);
+        }
+      } else {
+        console.log(`⚠️ 第 ${i} 张图片没有 url 字段`);
+      }
+    }
+
+    console.log("📋 最终返回的 imageUrls:", imageUrls);
 
     return NextResponse.json<ApiResponse>({
       success: true,

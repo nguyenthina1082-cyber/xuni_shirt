@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navigation } from "@/components/ui/navigation";
 import { Footer } from "@/components/ui/footer";
 import { AIInputWithSearch } from "@/components/ui/ai-input-with-search";
@@ -20,6 +20,8 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<number | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const hour = new Date().getHours();
   let timeOfDay;
@@ -27,8 +29,95 @@ export default function HomePage() {
   else if (hour < 18) timeOfDay = "下午好";
   else timeOfDay = "晚上好";
 
+  useEffect(() => {
+    const savedConversationId = localStorage.getItem("currentConversationId");
+    if (savedConversationId) {
+      const id = parseInt(savedConversationId);
+      selectConversation(id);
+      localStorage.removeItem("currentConversationId");
+    }
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const createNewConversation = async () => {
+    try {
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "新对话" }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setCurrentConversationId(data.data.id);
+          setMessages([]);
+          return data.data.id;
+        }
+      }
+    } catch (error) {
+      console.error("创建对话失败:", error);
+    }
+    return null;
+  };
+
+  const selectConversation = async (id: number) => {
+    try {
+      const response = await fetch(`/api/conversations/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setCurrentConversationId(id);
+          setMessages(data.data.messages);
+        }
+      }
+    } catch (error) {
+      console.error("获取对话失败:", error);
+    }
+  };
+
+  const deleteConversation = async (id: number) => {
+    try {
+      const response = await fetch(`/api/conversations/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && currentConversationId === id) {
+          setCurrentConversationId(null);
+          setMessages([]);
+        }
+      }
+    } catch (error) {
+      console.error("删除对话失败:", error);
+    }
+  };
+
+  const renameConversation = async (id: number, newTitle: string) => {
+    try {
+      const response = await fetch(`/api/conversations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (!response.ok) {
+        console.error("重命名对话失败");
+      }
+    } catch (error) {
+      console.error("重命名对话失败:", error);
+    }
+  };
+
   const handleSubmit = async (value: string, withSearch: boolean) => {
     if (!value.trim() && pendingImages.length === 0) return;
+
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      conversationId = await createNewConversation();
+      if (!conversationId) return;
+    }
 
     const imagesToUse = [...pendingImages];
 
@@ -42,6 +131,24 @@ export default function HomePage() {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
     setPendingImages([]);
+
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: "user",
+          content: value,
+          imageUrls: imagesToUse,
+        }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("保存用户消息失败:", errorData);
+      }
+    } catch (error) {
+      console.error("保存用户消息失败:", error);
+    }
 
     if (imagesToUse.length >= 2) {
       try {
@@ -64,6 +171,20 @@ export default function HomePage() {
               imageUrls: [data.data.result_image],
             };
             setMessages((prev) => [...prev, assistantMessage]);
+
+            try {
+              await fetch(`/api/conversations/${conversationId}/messages`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  role: "assistant",
+                  content: "换装完成！效果如下：",
+                  imageUrls: [data.data.result_image],
+                }),
+              });
+            } catch (error) {
+              console.error("保存助手消息失败:", error);
+            }
           }
         }
       } catch {
@@ -81,6 +202,19 @@ export default function HomePage() {
         content: "请上传人物照片和服装图片，我来帮你换装！",
       };
       setMessages((prev) => [...prev, assistantMessage]);
+
+      try {
+        await fetch(`/api/conversations/${conversationId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: "assistant",
+            content: "请上传人物照片和服装图片，我来帮你换装！",
+          }),
+        });
+      } catch (error) {
+        console.error("保存助手消息失败:", error);
+      }
     }
 
     setIsLoading(false);
@@ -131,68 +265,92 @@ export default function HomePage() {
       />
 
       <div className="relative max-w-3xl mx-auto px-6 pt-32 pb-20">
-        <header className="text-center mb-12">
-          <BlurFade delay={0.25} inView>
-            <h2 className="text-4xl font-bold tracking-tighter sm:text-5xl">
-              {timeOfDay}，欢迎来到贝塔换衣间
-            </h2>
-          </BlurFade>
-          <BlurFade delay={0.25 * 2} inView>
-            <p className="mt-4 text-lg text-gray-500">
-              上传照片，我来帮你换装
-            </p>
-          </BlurFade>
-        </header>
+        {messages.length === 0 ? (
+          <>
+            <header className="text-center mb-12">
+              <BlurFade delay={0.25} inView>
+                <h2 className="text-4xl font-bold tracking-tighter sm:text-5xl">
+                  {timeOfDay}，欢迎来到贝塔换衣间
+                </h2>
+              </BlurFade>
+              <BlurFade delay={0.25 * 2} inView>
+                <p className="mt-4 text-lg text-gray-500">
+                  上传照片，我来帮你换装
+                </p>
+              </BlurFade>
+            </header>
 
-        <div className="max-w-2xl mx-auto mb-12">
-          <AIInputWithSearch
-            onSubmit={handleSubmit}
-            onFileSelect={handleFileSelect}
-            placeholder="描述你想要的效果..."
-          />
-        </div>
-
-        {pendingImages.length > 0 && (
-          <div className="max-w-2xl mx-auto mb-12">
-            <p className="text-sm text-gray-500 mb-3 text-center">已上传 {pendingImages.length} 张图片（第一张为人物，第二张为服装）</p>
-            <div className="flex gap-4 justify-center">
-              {pendingImages.map((img, i) => (
-                <div key={i} className="relative">
-                  <img src={img} alt={`上传${i + 1}`} className="w-24 h-32 object-cover rounded-xl" />
-                  <span className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {i + 1}
-                  </span>
-                </div>
-              ))}
+            <div className="max-w-2xl mx-auto mb-12">
+              <AIInputWithSearch
+                onSubmit={handleSubmit}
+                onFileSelect={handleFileSelect}
+                placeholder="描述你想要的效果..."
+              />
             </div>
-          </div>
-        )}
 
-        <div className="max-w-2xl mx-auto mb-12">
-          <p className="text-sm text-gray-400 mb-3 text-center">试试这样问：</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            <button
-              onClick={() => handleSubmit("把图片1的人物换成图片2的衣服", false)}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
-            >
-              把图片1的人物换成图片2的衣服
-            </button>
-            <button
-              onClick={() => handleSubmit("帮我把这件衣服换到左边的人身上", false)}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
-            >
-              帮我把这件衣服换到左边的人身上
-            </button>
-            <button
-              onClick={() => handleSubmit("右边的人穿左边这件衣服", false)}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
-            >
-              右边的人穿左边这件衣服
-            </button>
-          </div>
-        </div>
+            {pendingImages.length > 0 && (
+              <div className="max-w-2xl mx-auto mb-12">
+                <p className="text-sm text-gray-500 mb-3 text-center">已上传 {pendingImages.length} 张图片（第一张为人物，第二张为服装）</p>
+                <div className="flex gap-4 justify-center">
+                  {pendingImages.map((img, i) => (
+                    <div key={i} className="relative">
+                      <img src={img} alt={`上传${i + 1}`} className="w-24 h-32 object-cover rounded-xl" />
+                      <span className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                        {i + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {messages.length > 0 && (
+            <div className="max-w-2xl mx-auto mb-12">
+              <p className="text-sm text-gray-400 mb-3 text-center">试试这样问：</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <button
+                  onClick={() => handleSubmit("把图片1的人物换成图片2的衣服", false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+                >
+                  把图片1的人物换成图片2的衣服
+                </button>
+                <button
+                  onClick={() => handleSubmit("帮我把这件衣服换到左边的人身上", false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+                >
+                  帮我把这件衣服换到左边的人身上
+                </button>
+                <button
+                  onClick={() => handleSubmit("右边的人穿左边这件衣服", false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-colors"
+                >
+                  右边的人穿左边这件衣服
+                </button>
+              </div>
+            </div>
+
+            <section className="max-w-4xl mx-auto mt-16">
+              <h3 className="text-lg font-semibold mb-6 text-center">创作案例</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="relative group rounded-xl overflow-hidden cursor-pointer">
+                    <div className="w-full aspect-[3/4]">
+                      <img
+                        src={`https://picsum.photos/300/450?random=${i + 10}`}
+                        alt={`案例${i}`}
+                        className="w-full h-full object-cover rounded-xl group-hover:scale-110 duration-300 transition-all"
+                        onClick={() => setPreviewImage(`https://picsum.photos/300/450?random=${i + 10}`)}
+                      />
+                    </div>
+                    <div className="absolute left-0 right-0 top-0 m-3 flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-full bg-[rgba(51,51,51,0.8)] transition-all duration-300 group-hover:w-[72px]">
+                      <span className="text-white text-xs">▶</span>
+                      <span className="text-white/80 text-xs">View</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        ) : (
           <div className="space-y-6">
             {messages.map((msg) => (
               <BlurFade key={msg.id} inView>
@@ -233,42 +391,44 @@ export default function HomePage() {
                 </div>
               </BlurFade>
             ))}
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="flex justify-start mb-6">
-            <div className="bg-gray-100 rounded-2xl px-6 py-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+            {isLoading && (
+              <div className="flex justify-start mb-6">
+                <div className="bg-gray-100 rounded-2xl px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                  </div>
+                </div>
               </div>
+            )}
+            <div ref={messagesEndRef} />
+
+            <div className="max-w-2xl mx-auto mt-12">
+              <AIInputWithSearch
+                onSubmit={handleSubmit}
+                onFileSelect={handleFileSelect}
+                placeholder="继续描述你想要的效果..."
+              />
             </div>
-          </div>
-        )}
 
-        <section className="max-w-4xl mx-auto mt-16">
-          <h3 className="text-lg font-semibold mb-6 text-center">创作案例</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="relative group rounded-xl overflow-hidden cursor-pointer">
-                <div className="w-full aspect-[3/4]">
-                  <img
-                    src={`https://picsum.photos/300/450?random=${i + 10}`}
-                    alt={`案例${i}`}
-                    className="w-full h-full object-cover rounded-xl group-hover:scale-110 duration-300 transition-all"
-                    onClick={() => setPreviewImage(`https://picsum.photos/300/450?random=${i + 10}`)}
-                  />
-                </div>
-                <div className="absolute left-0 right-0 top-0 m-3 flex h-7 w-7 items-center justify-center gap-1 overflow-hidden rounded-full bg-[rgba(51,51,51,0.8)] transition-all duration-300 group-hover:w-[72px]">
-                  <span className="text-white text-xs">▶</span>
-                  <span className="text-white/80 text-xs">View</span>
+            {pendingImages.length > 0 && (
+              <div className="max-w-2xl mx-auto mt-4">
+                <p className="text-sm text-gray-500 mb-3 text-center">已上传 {pendingImages.length} 张图片</p>
+                <div className="flex gap-4 justify-center">
+                  {pendingImages.map((img, i) => (
+                    <div key={i} className="relative">
+                      <img src={img} alt={`上传${i + 1}`} className="w-24 h-32 object-cover rounded-xl" />
+                      <span className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                        {i + 1}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
-        </section>
+        )}
       </div>
 
       {previewImage && (
@@ -293,12 +453,12 @@ export default function HomePage() {
               e.stopPropagation();
               downloadImage(previewImage, `preview-${Date.now()}.png`);
             }}
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 bg-white text-black rounded-full font-medium flex items-center gap-2 hover:bg-gray-100 transition-colors"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center gap-2 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            下载图片
+            下载
           </button>
         </div>
       )}
