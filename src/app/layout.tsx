@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import CrispChat from '@/components/crisp-chat';
 
 export const metadata: Metadata = {
   title: "贝塔换衣间 | Virtual Fitting Room",
@@ -20,6 +21,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-white text-gray-900 antialiased">
+        <CrispChat />
         {children}
       </body>
     </html>
