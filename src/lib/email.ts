@@ -1,4 +1,6 @@
 import { Resend } from 'resend';
+import { generateStyleTip } from '@/services/ark';
+import { sql } from '@/lib/db';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -25,4 +27,41 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
       </div>
     `,
   });
+}
+
+export async function sendDailyStyleTip(userEmail: string, userName: string) {
+  const styleTip = await generateStyleTip(userName);
+
+  await resend.emails.send({
+    from: '贝塔换衣间 <hello@runvo.xyz>',
+    to: userEmail,
+    subject: `早安 ${userName}，今日穿搭灵感已送达 ✨`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
+        <h2>Hi ${userName}，早安！</h2>
+        <p>${styleTip}</p>
+        <br/>
+        <p>上传你的照片，来贝塔换衣间试试新穿搭吧～</p>
+        <br/>
+        <p>—— 贝塔换衣间</p>
+        <p style="color: #999; font-size: 12px;">
+          想换个造型？<a href="https://runvo.xyz">点我来试试</a>
+        </p>
+      </div>
+    `,
+  });
+}
+
+export async function sendDailyStyleTipToAll() {
+  const users = await sql`SELECT email FROM users`;
+
+  for (const user of users) {
+    try {
+      const userName = user.email.split('@')[0];
+      await sendDailyStyleTip(user.email, userName);
+      console.log(`✅ 每日穿搭邮件发送成功: ${user.email}`);
+    } catch (error) {
+      console.error(`❌ 给 ${user.email} 发送每日穿搭邮件失败：`, error);
+    }
+  }
 }

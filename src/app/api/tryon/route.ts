@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const personImage = body.personImage || body.person_image;
     const clothingImage = body.clothingImage || body.clothing_image;
+    const prompt = body.prompt;
 
     if (!personImage) {
       return NextResponse.json<ApiResponse>(
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     const clothingImageUrl = clothingImage.startsWith("data:") ? clothingImage : `data:image/jpeg;base64,${clothingImage}`;
 
     const client = getArkClient();
-    const result = await client.generateTryOnImage(personImageUrl, clothingImageUrl);
+    const result = await client.generateTryOnImage(personImageUrl, clothingImageUrl, prompt);
 
     console.log("🎨 Ark API 返回结果:", JSON.stringify(result, null, 2));
 

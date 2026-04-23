@@ -7,6 +7,7 @@ import { AIInputWithSearch } from "@/components/ui/ai-input-with-search";
 import { BlurFade } from "@/components/ui/blur-fade";
 import { DotPattern } from "@/components/ui/dot-pattern";
 import { cn } from "@/lib/utils";
+import { generateConversationResponse } from "@/services/ark";
 
 interface Message {
   id: string;
@@ -158,16 +159,18 @@ export default function HomePage() {
           body: JSON.stringify({
             person_image: imagesToUse[0],
             clothing_image: imagesToUse[1],
+            prompt: value,
           }),
         });
 
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data?.result_image) {
+            const aiResponse = await generateConversationResponse(value);
             const assistantMessage: Message = {
               id: (Date.now() + 1).toString(),
               role: "assistant",
-              content: "换装完成！效果如下：",
+              content: aiResponse,
               imageUrls: [data.data.result_image],
             };
             setMessages((prev) => [...prev, assistantMessage]);
@@ -178,7 +181,7 @@ export default function HomePage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   role: "assistant",
-                  content: "换装完成！效果如下：",
+                  content: aiResponse,
                   imageUrls: [data.data.result_image],
                 }),
               });
