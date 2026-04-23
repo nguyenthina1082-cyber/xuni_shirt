@@ -30,7 +30,12 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
 }
 
 export async function sendDailyStyleTip(userEmail: string, userName: string) {
-  const styleTip = await generateStyleTip(userName);
+  let styleTip = "今日份穿搭灵感来啦，快来看看有没有让你心动的搭配！";
+  try {
+    styleTip = await generateStyleTip(userName);
+  } catch (error) {
+    console.error(`AI 生成穿搭文案失败，使用默认文案：`, error);
+  }
 
   await resend.emails.send({
     from: '贝塔换衣间 <hello@runvo.xyz>',
@@ -55,6 +60,8 @@ export async function sendDailyStyleTip(userEmail: string, userName: string) {
 export async function sendDailyStyleTipToAll() {
   const users = await sql`SELECT email FROM users`;
 
+  console.log(`📋 查询到 ${users.length} 个用户准备发送邮件`);
+
   for (const user of users) {
     try {
       const userName = user.email.split('@')[0];
@@ -64,4 +71,6 @@ export async function sendDailyStyleTipToAll() {
       console.error(`❌ 给 ${user.email} 发送每日穿搭邮件失败：`, error);
     }
   }
+
+  console.log(`📤 邮件发送任务完成`);
 }
