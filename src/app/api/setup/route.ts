@@ -57,6 +57,19 @@ export async function GET() {
 
     await sql`CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id)`;
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS generated_images (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        image_url TEXT NOT NULL,
+        prompt TEXT,
+        model VARCHAR(100) DEFAULT 'doubao-seedream-5-0-260128',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_generated_images_user_id ON generated_images(user_id)`;
+
     return NextResponse.json({ success: true, message: "All tables ready" });
   } catch (error) {
     return NextResponse.json(

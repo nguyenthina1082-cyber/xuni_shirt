@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getArkClient, ApiErrorType } from "@/services/ark";
 import { uploadToR2 } from "@/lib/r2";
+import { sql } from "@/lib/db";
 import type { ApiResponse } from "@/types";
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+
+  let userId: number | null = null;
+  try {
+    const token = request.cookies.get("auth_token")?.value;
+    if (token) {
+      try {
+        const decoded = Buffer.from(token, "base64").toString("utf-8");
+        const parsed = JSON.parse(decoded);
+        userId = parsed.userId;
+      } catch {
+        userId = null;
+      }
+    }
+  } catch {
+    userId = null;
+  }
 
   try {
     const body = await request.json();
@@ -49,6 +66,14 @@ export async function POST(request: NextRequest) {
           const uploadedUrl = await uploadToR2(buffer, fileName, "image/png");
           console.log(`✅ 上传成功，R2 URL:`, uploadedUrl);
           imageUrls.push(uploadedUrl);
+
+          if (userId) {
+            await sql`
+              INSERT INTO generated_images (user_id, image_url, prompt, model)
+              VALUES (${userId}, ${uploadedUrl}, ${"换装生成"}, ${"doubao-seedream-5-0-260128"})
+            `;
+            console.log(`💾 已保存图片到数据库，用户ID:`, userId);
+          }
         } catch (uploadError) {
           console.error(`❌ 处理第 ${i} 张图片失败:`, uploadError);
           imageUrls.push(img.url);
