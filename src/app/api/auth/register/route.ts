@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,6 +77,13 @@ export async function POST(request: NextRequest) {
       INSERT INTO users (email, password_hash)
       VALUES (${email}, ${passwordHash})
     `;
+
+    const userName = email.split("@")[0];
+    try {
+      await sendWelcomeEmail(email, userName);
+    } catch (error) {
+      console.error("欢迎邮件发送失败：", error);
+    }
 
     return NextResponse.json({
       success: true,
