@@ -22,6 +22,12 @@ export async function sendWelcomeEmail(userEmail: string, userName: string) {
           <li>描述你想要的效果，AI帮你完成换装</li>
         </ol>
         <br/>
+        <p>有任何问题或建议？</p>
+        <ul style="color: #666;">
+          <li>回复这封邮件，我会收到你的消息</li>
+          <li>或在网站上点击右下角"反馈"按钮</li>
+        </ul>
+        <br/>
         <p>开始你的换装之旅吧！</p>
         <p>—— 贝塔换衣间</p>
       </div>
