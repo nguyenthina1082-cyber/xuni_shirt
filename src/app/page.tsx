@@ -165,8 +165,16 @@ export default function HomePage() {
 
         if (response.ok) {
           const data = await response.json();
+          console.log("📥 API 响应:", JSON.stringify(data));
+
           if (data.success && data.data?.result_image) {
-            const aiResponse = await generateConversationResponse(value);
+            let aiResponse = "换装完成！效果如下：";
+            try {
+              aiResponse = await generateConversationResponse(value);
+            } catch (aiError) {
+              console.error("🤖 AI 回复生成失败，使用默认文案:", aiError);
+            }
+
             const assistantMessage: Message = {
               id: (Date.now() + 1).toString(),
               role: "assistant",
@@ -188,9 +196,27 @@ export default function HomePage() {
             } catch (error) {
               console.error("保存助手消息失败:", error);
             }
+          } else {
+            console.error("❌ API 返回格式异常:", data);
+            const errorMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: "assistant",
+              content: "换装过程中出现了一些问题，请重试。",
+            };
+            setMessages((prev) => [...prev, errorMessage]);
           }
+        } else {
+          const errorText = await response.text();
+          console.error("❌ API 请求失败:", response.status, errorText);
+          const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: "换装请求失败，请重试。",
+          };
+          setMessages((prev) => [...prev, errorMessage]);
         }
-      } catch {
+      } catch (error) {
+        console.error("💥 换装流程异常:", error);
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
